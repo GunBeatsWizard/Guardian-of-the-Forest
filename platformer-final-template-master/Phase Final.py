@@ -10,8 +10,8 @@ pygame.init()
 
 # Window
 scale = 64
-SCREEN_WIDTH = 29 * scale
-SCREEN_HEIGHT = 15 * scale
+SCREEN_WIDTH = 18 * scale
+SCREEN_HEIGHT = 9 * scale
 TITLE = "Phase Final"
 FPS = 30
 
@@ -684,6 +684,12 @@ class Game():
                 
             else:
                 x_f = -1 * self.hero.rect.centerx + SCREEN_WIDTH / 2 + (3 * 64)
+
+        if x_f > 0:
+            x_f = 0
+
+        if x_f > self.level.width:
+            x_f = self.level.width
 
         x_i = self.offset_x
 
