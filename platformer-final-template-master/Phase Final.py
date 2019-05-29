@@ -118,6 +118,7 @@ class Hero(pygame.sprite.Sprite):
         self.vx = 0
         self.vy = 0
         self.terminal = True
+        self.dashing= False
         
         self.hearts = 3
         self.hurt_timer = 0
@@ -175,6 +176,14 @@ class Hero(pygame.sprite.Sprite):
             self.terminal = True
             self.vy = -self.jump_power
             jump_snd.play()
+
+    def dash_rt(self):
+        if not self.dashing:
+            pass
+    
+    def dash_lt(self):
+        if not self.dashing:
+            pass
 
     def apply_gravity(self, level):
         self.vy += level.gravity
