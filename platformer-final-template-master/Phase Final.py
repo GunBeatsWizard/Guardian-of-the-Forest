@@ -61,21 +61,25 @@ gem_snd = load_sound('assets/sounds/gem.ogg')
 idle = load_image('assets/images/characters/Rf-1.png')
 walk = [load_image('assets/images/characters/Rf-1.png'),
         load_image('assets/images/characters/Rf-2.png')]
-jump = load_image('assets/images/characters/platformChar_jump.png')
-hurt = load_image('assets/images/characters/platformChar_hurt.png')
+jump = load_image('assets/images/characters/jump.png')
+fall = load_image('assets/images/characters/Fall.png')
+hurt = load_image('assets/images/characters/Rf-1.png')
 
                  
 hero_images = { "idle_rt": idle,
                 "walk_rt": walk, 
                 "jump_rt": jump,
                 "hurt_rt": hurt,
+                "fall_rt": fall,
                 "idle_lt": flip_image(idle),
-                "walk_lt" : [flip_image(img) for img in walk],
+                "walk_lt": [flip_image(img) for img in walk],
                 "jump_lt": flip_image(jump),
-                "hurt_lt": flip_image(hurt) }
+                "hurt_lt": flip_image(hurt),
+                "fall_lt": flip_image(fall)
+                }
              
 
-tile_images = { "Grass": load_image('assets/images/tiles/platformPack_tile001.png'),
+tile_images = { "Grass": load_image('assets/images/tiles/ground.png'),
                 "Dirt": load_image('assets/images/tiles/platformPack_tile007.png'),
                 "Platform": load_image('assets/images/tiles/platformPack_tile007.png'),
                 "Plant": load_image('assets/images/tiles/platformPack_tile045.png'),
@@ -116,9 +120,11 @@ class Hero(pygame.sprite.Sprite):
         self.speed = 12
         self.jump_power = 30
         self.vx = 0
+        self.friction = 2.5
+        self.dash_power = 35
         self.vy = 0
         self.terminal = True
-        self.dashing= False
+        self.dashing = False
         
         self.hearts = 3
         self.hurt_timer = 0
@@ -143,18 +149,36 @@ class Hero(pygame.sprite.Sprite):
             self.walk_index = (self.walk_index + 1) % len(self.images['walk_rt'])
             
     def move_left(self):
-        self.vx = -self.speed
-        self.right_orientation = False
-        self.step()
+        if not self.dashing:
+            self.vx = -self.speed
+            self.right_orientation = False
+            self.step()
         
     def move_right(self):
-        self.vx = self.speed
-        self.right_orientation = True
-        self.step()
+        if not self.dashing:
+            self.vx = self.speed
+            self.right_orientation = True
+            self.step()
         
-    def stop(self): 
-        self.vx = 0
-        
+    def stop(self):
+        if not self.dashing:
+            if 1 > self.vx > -1:
+                self.vx = 0
+                self.dashing = False            
+            elif self.vx > 0.5:
+                self.vx -= self.friction
+            elif self.vx < -0.5:
+                self.vx += self.friction
+                
+    def dash_stop(self):
+        if self.dashing:
+            if 1 > self.vx > -1:
+                self.vx = 0
+                self.dashing = False            
+            elif self.vx > 0.5:
+                self.vx -= self.friction
+            elif self.vx < -0.5:
+                self.vx += self.friction
 
     def can_jump(self, tiles):
         self.rect.y += 2
@@ -179,11 +203,15 @@ class Hero(pygame.sprite.Sprite):
 
     def dash_rt(self):
         if not self.dashing:
-            pass
+            self.dashing = True
+            self.vx = 0
+            self.vx += self.dash_power
     
     def dash_lt(self):
         if not self.dashing:
-            pass
+            self.dashing = True
+            self.vx = 0
+            self.vx += - self.dash_power
 
     def apply_gravity(self, level):
         self.vy += level.gravity
@@ -246,12 +274,13 @@ class Hero(pygame.sprite.Sprite):
             walk = self.images['walk_rt']
             jump = self.images['jump_rt']
             hurt = self.images['hurt_rt']
-            
+            fall = self.images['fall_rt']
         else:
             idle = self.images['idle_lt']
             walk = self.images['walk_lt']
             jump = self.images['jump_lt']
             hurt = self.images['hurt_lt']
+            fall = self.images['fall_lt']
 
         if self.hurt_timer > 0:
             self.image = hurt
@@ -270,6 +299,7 @@ class Hero(pygame.sprite.Sprite):
         self.process_enemies(level)
         self.check_goal(level)
         self.set_image()
+        self.dash_stop()
 
 class BasicEnemy(pygame.sprite.Sprite):
     '''
@@ -724,7 +754,10 @@ class Game():
                     if event.key == pygame.K_SPACE:
                         self.hero.jump(self.level.main_tiles)
                         self.hero.slam(self.level.main_tiles)
-
+                    if event.key == pygame.K_e:
+                        self.hero.dash_rt()
+                    if event.key == pygame.K_q:
+                        self.hero.dash_lt()                        
                 elif self.stage == Game.WIN or self.stage == Game.LOSE:
                     if event.key == pygame.K_SPACE:
                         self.setup()
