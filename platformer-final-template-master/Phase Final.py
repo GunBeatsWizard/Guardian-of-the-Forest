@@ -710,25 +710,18 @@ class Game():
         rect.top = 64
         screen.blit(text, rect)          
                    
-    def calculate_offset(self):
-        if self.hero.rect.centerx < SCREEN_WIDTH / 2 - (3 * 64):
-            x_f = 0
-
-        elif self.hero.rect.centerx > self.level.width - SCREEN_WIDTH / 2 + (3 * 64):
-            x_f = -1 * self.level.width + SCREEN_WIDTH
+    def calculate_offset(self):            
+        if self.hero.right_orientation:
+            x_f = -1 * self.hero.rect.centerx + SCREEN_WIDTH / 2 - (3 * 64)
             
         else:
-            if self.hero.right_orientation:
-                x_f = -1 * self.hero.rect.centerx + SCREEN_WIDTH / 2 - (3 * 64)
-                
-            else:
-                x_f = -1 * self.hero.rect.centerx + SCREEN_WIDTH / 2 + (3 * 64)
+            x_f = -1 * self.hero.rect.centerx + SCREEN_WIDTH / 2 + (3 * 64)
 
         if x_f > 0:
             x_f = 0
 
-        if x_f > self.level.width:
-            x_f = self.level.width
+        if x_f > self.level.width - (18*64):
+            x_f = self.level.width - (18*64)
 
         x_i = self.offset_x
 

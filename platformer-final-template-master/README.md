@@ -9,7 +9,7 @@ Use the code from this repository as a template to create your own platformer. E
 ### Very Easy
 
 - Name your game.
-- Change the dimensions of the game window.
+- Change the dimensions of the game window. 
 - Find your own custom artwork for tiles.
 - Find your own custom artwork for the hero.
 - Find your own custom artwork for enemies.
