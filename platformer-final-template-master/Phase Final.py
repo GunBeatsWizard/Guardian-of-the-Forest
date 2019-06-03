@@ -19,7 +19,8 @@ FPS = 30
 show_grid = False
 grid_color = (150, 150, 150)
 
-screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
+SIZE  = (SCREEN_WIDTH, SCREEN_HEIGHT)
+screen = pygame.display.set_mode(SIZE, pygame.FULLSCREEN)
 pygame.display.set_caption(TITLE)
 
 # Helper functions for loading assets
@@ -55,6 +56,8 @@ font_xl = load_font("assets/fonts/Cheri.ttf", 80)
 
 # Sounds
 jump_snd = load_sound('assets/sounds/jump.ogg')
+dash_snd = load_sound('assets/sounds/dash.ogg')
+death_snd = load_sound('assets/sounds/death.ogg')
 gem_snd = load_sound('assets/sounds/gem.ogg')
 
 # Images
@@ -63,41 +66,53 @@ walk = [load_image('assets/images/characters/Rf-1.png'),
         load_image('assets/images/characters/Rf-2.png')]
 jump = load_image('assets/images/characters/jump.png')
 fall = load_image('assets/images/characters/Fall.png')
-hurt = load_image('assets/images/characters/Rf-1.png')
-
+hurt = load_image('assets/images/characters/Hurt.png')
+ffall = load_image('assets/images/characters/FFall.png')
+dash = load_image('assets/images/characters/Dash.png')
                  
 hero_images = { "idle_rt": idle,
                 "walk_rt": walk, 
                 "jump_rt": jump,
                 "hurt_rt": hurt,
                 "fall_rt": fall,
+                "ffall_rt":ffall,
+                "dash_rt": flip_image(dash),
                 "idle_lt": flip_image(idle),
                 "walk_lt": [flip_image(img) for img in walk],
                 "jump_lt": flip_image(jump),
                 "hurt_lt": flip_image(hurt),
-                "fall_lt": flip_image(fall)
+                "fall_lt": flip_image(fall),
+                "ffall_lt": flip_image(ffall),
+                "dash_lt": dash
                 }
              
 
 tile_images = { "Grass": load_image('assets/images/tiles/ground.png'),
                 "Dirt": load_image('assets/images/tiles/platformPack_tile007.png'),
-                "Platform": load_image('assets/images/tiles/platformPack_tile007.png'),
+                "P1": load_image('assets/images/tiles/P1.png'),
+                "P2": load_image('assets/images/tiles/P2.png'),
+                "P3":  load_image('assets/images/tiles/P3.png'),
+                "Wall1":load_image('assets/images/tiles/Wall1.png'),
+                "Wall2":load_image('assets/images/tiles/Wall2.png'),
+                "Wall3":load_image('assets/images/tiles/Wall3.png'),
                 "Plant": load_image('assets/images/tiles/platformPack_tile045.png'),
                 "FlagTop": load_image('assets/images/tiles/medievalTile_166.png'),
                 "FlagPole": load_image('assets/images/tiles/medievalTile_190.png') }
 
 
-basic_enemy_images = { "walk1": load_image('assets/images/characters/platformPack_tile024.png') }
+basic_enemy_images = { "walk1": load_image('assets/images/characters/BEnemy.png') }
 
-platform_enemy_images = { "walk1": load_image('assets/images/characters/platformPack_tile011.png') } 
+platform_enemy_images = { "walk1": load_image('assets/images/characters/rolling_enemy-1.png.png') } 
 
+spike_enemy_images = { "walk1" : load_image('assets/images/characters/Damage.png') }
+                       
 item_images = { "Gem": load_image('assets/images/items/platformPack_item008.png') }
 
 # Levels
-levels = ["assets/levels/level_1.json",
-          "assets/levels/level_1.json",
+levels = ["assets/levels/level_3.json",
+          "assets/levels/level_2.json",
           "assets/levels/level_1.json"]
-    
+
 # Sprite classes
 class Tile(pygame.sprite.Sprite):
     def __init__(self, x, y, image):
@@ -204,15 +219,19 @@ class Hero(pygame.sprite.Sprite):
     def dash_rt(self):
         if not self.dashing:
             self.dashing = True
+            self.right_orientation = True
             self.vx = 0
             self.vx += self.dash_power
+            dash_snd.play()
     
     def dash_lt(self):
         if not self.dashing:
             self.dashing = True
+            self.right_orientation = False
             self.vx = 0
             self.vx += - self.dash_power
-
+            dash_snd.play()
+            
     def apply_gravity(self, level):
         self.vy += level.gravity
         if self.terminal:
@@ -256,8 +275,13 @@ class Hero(pygame.sprite.Sprite):
             hit_list = pygame.sprite.spritecollide(self, level.enemies, False)
 
             for hit in hit_list:
-                self.hearts -= 1
-                self.hurt_timer = 30
+                if self.dashing or self.vy > 36:
+                    hit.kill()
+                    self.score += 30
+                    death_snd.play()
+                else:
+                    self.hearts -= 1
+                    self.hurt_timer = 30
     
     def check_world_edges(self, level):
         if self.rect.left < 0:
@@ -265,6 +289,9 @@ class Hero(pygame.sprite.Sprite):
         elif self.rect.right > level.width:
             self.rect.right = level.width
 
+        if self.rect.top >= 576:
+            self.hearts = 0
+            
     def check_goal(self, level):
         self.reached_goal = level.goal.contains(self.rect)
         
@@ -275,17 +302,27 @@ class Hero(pygame.sprite.Sprite):
             jump = self.images['jump_rt']
             hurt = self.images['hurt_rt']
             fall = self.images['fall_rt']
+            ffall = self.images['ffall_rt']
+            dash = self.images['dash_rt']
         else:
             idle = self.images['idle_lt']
             walk = self.images['walk_lt']
             jump = self.images['jump_lt']
             hurt = self.images['hurt_lt']
             fall = self.images['fall_lt']
-
+            ffall = self.images['ffall_lt']
+            dash = self.images['dash_lt']
+            
         if self.hurt_timer > 0:
             self.image = hurt
-        elif self.vy != 0:
+        elif self.vx > 12 or self.vx < -12:
+            self.image = dash
+        elif self.vy < 0:
             self.image = jump
+        elif self.vy > 36:
+            self.image = ffall
+        elif self.vy > 0:
+            self.image = fall
         elif self.vx == 0:
             self.image = idle
         else:
@@ -301,6 +338,19 @@ class Hero(pygame.sprite.Sprite):
         self.set_image()
         self.dash_stop()
 
+class Spikes(pygame.sprite.Sprite):
+    def __init__(self, x, y, images):
+        super().__init__()
+
+        self.images = images
+        self.image = images["walk1"]
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        
+    def update(self):
+        pass
+    
 class BasicEnemy(pygame.sprite.Sprite):
     '''
     BasicEnemies move back and forth, turning around whenever
@@ -652,34 +702,34 @@ class Game():
             self.stage = Game.WIN
 
     def show_title_screen(self):
-        text = font_xl.render(TITLE, 1, BLACK)
+        text = font_xl.render(TITLE, 1, WHITE)
         rect = text.get_rect()
         rect.centerx = SCREEN_WIDTH // 2
         rect.centery = 212
         screen.blit(text, rect)
         
-        text = font_sm.render("Press space to start.", 1, BLACK)
+        text = font_sm.render("Press space to start.", 1, WHITE)
         rect = text.get_rect()
         rect.centerx = SCREEN_WIDTH // 2
         rect.centery = 272
         screen.blit(text, rect)
         
     def show_cleared_screen(self):
-        text = font_lg.render("Level cleared", 1, BLACK)
+        text = font_lg.render("Level cleared", 1, WHITE)
         rect = text.get_rect()
         rect.centerx = SCREEN_WIDTH // 2
         rect.centery = 144
         screen.blit(text, rect)
 
     def show_win_screen(self):
-        text = font_lg.render("You win", 1, BLACK)
+        text = font_lg.render("You win", 1, WHITE)
         rect = text.get_rect()
         rect.centerx = SCREEN_WIDTH // 2
         rect.centery = 144
         screen.blit(text, rect)
 
     def show_lose_screen(self):
-        text = font_lg.render("You lose", 1, BLACK)
+        text = font_lg.render("You lose", 1, WHITE)
         rect = text.get_rect()
         rect.centerx = SCREEN_WIDTH // 2
         rect.centery = 144
@@ -688,7 +738,7 @@ class Game():
     def show_stats(self):
         level_str = "L: " + str(self.current_level)
         
-        text = font_md.render(level_str, 1, BLACK)
+        text = font_md.render(level_str, 1, WHITE)
         rect = text.get_rect()
         rect.left = 24
         rect.top = 24
@@ -696,7 +746,7 @@ class Game():
     
         score_str = "S: " + str(self.hero.score)
         
-        text = font_md.render(score_str, 1, BLACK)
+        text = font_md.render(score_str, 1, WHITE)
         rect = text.get_rect()
         rect.right = SCREEN_WIDTH - 24
         rect.top = 24
@@ -704,7 +754,7 @@ class Game():
         
         score_str = "H: " + str(self.hero.hearts)
         
-        text = font_md.render(score_str, 1, BLACK)
+        text = font_md.render(score_str, 1, WHITE)
         rect = text.get_rect()
         rect.left = 24
         rect.top = 64
@@ -720,8 +770,8 @@ class Game():
         if x_f > 0:
             x_f = 0
 
-        if x_f > self.level.width - (18*64):
-            x_f = self.level.width - (18*64)
+        if x_f < -(self.level.width - (18*64)):
+            x_f = -(self.level.width - (18*64))
 
         x_i = self.offset_x
 
@@ -739,6 +789,9 @@ class Game():
                 self.running = False
                 
             elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_1:
+                    self.running = False
+                    
                 if self.stage == Game.START:
                     if event.key == pygame.K_SPACE:
                         self.start_level()
